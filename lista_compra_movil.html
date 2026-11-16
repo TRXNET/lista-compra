@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#16a34a">
+<title>Mi lista de la compra</title>
+<style>
+:root{
+  --bg:#f3f6f4;--card:#ffffff;--text:#14211a;--muted:#62756a;--line:#e1e9e4;
+  --accent:#16a34a;--accent2:#0d9488;--accent-soft:#dcfce7;--on-accent:#ffffff;
+  --done-bg:#e8f7ee;--done-text:#2f6b46;--shadow:0 6px 18px rgba(20,60,40,.08);
+  --danger:#dc2626;
+  color-scheme:light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0e1512;--card:#17211c;--text:#e8f2ec;--muted:#94a99c;--line:#25332b;
+    --accent:#22c55e;--accent2:#14b8a6;--accent-soft:#143a24;--on-accent:#04210f;
+    --done-bg:#12301f;--done-text:#86d9a6;--shadow:0 6px 18px rgba(0,0,0,.35);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0e1512;--card:#17211c;--text:#e8f2ec;--muted:#94a99c;--line:#25332b;
+  --accent:#22c55e;--accent2:#14b8a6;--accent-soft:#143a24;--on-accent:#04210f;
+  --done-bg:#12301f;--done-text:#86d9a6;--shadow:0 6px 18px rgba(0,0,0,.35);
+  color-scheme:dark;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px);-webkit-text-size-adjust:100%}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",system-ui,Roboto,Arial,sans-serif;padding-bottom:120px}
+button,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer;border:0;touch-action:manipulation}
+:focus-visible{outline:3px solid #f59e0b;outline-offset:2px}
+.hidden{display:none!important}
+main{max-width:640px;margin:0 auto;padding:0 14px}
+
+.hero{margin:0 -14px;padding:26px 20px 30px;color:#fff;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:0 0 28px 28px;box-shadow:var(--shadow)}
+.hero h1{margin:0;font-size:28px;letter-spacing:-.5px}
+.hero p{margin:6px 0 0;opacity:.92;font-size:15px}
+.hero .top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.theme{background:rgba(255,255,255,.2);color:#fff;border-radius:50%;width:42px;height:42px;font-size:20px;flex:none}
+
+.list{display:grid;gap:10px;margin:18px 0}
+.row{background:var(--card);border:2px solid transparent;border-radius:18px;box-shadow:var(--shadow);overflow:hidden;transition:border-color .15s,background .15s}
+.row.on{border-color:var(--accent);background:var(--accent-soft)}
+.pick{display:flex;align-items:center;gap:14px;width:100%;min-height:62px;padding:10px 16px;background:none;text-align:left}
+.emo{font-size:28px;width:40px;text-align:center;flex:none}
+.pname{flex:1;font-weight:650;font-size:17px}
+.tick{width:28px;height:28px;border-radius:50%;border:2px solid var(--line);display:grid;place-items:center;font-size:16px;color:transparent;flex:none;transition:all .15s}
+.row.on .tick{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.note{display:block;width:calc(100% - 32px);margin:0 16px 14px;padding:12px 14px;border:1.5px solid var(--line);border-radius:12px;background:var(--card);font-size:16px}
+.note::placeholder{color:var(--muted)}
+
+.bar{position:fixed;left:0;right:0;bottom:0;padding:12px 14px calc(12px + env(safe-area-inset-bottom,0px));background:linear-gradient(to top,var(--bg) 70%,transparent);z-index:5}
+.bar .inner{max-width:640px;margin:0 auto;display:flex;gap:10px}
+.cta{flex:1;padding:17px 18px;border-radius:16px;font-weight:700;font-size:17px;color:var(--on-accent);background:linear-gradient(135deg,var(--accent),var(--accent2));box-shadow:0 8px 20px rgba(22,163,74,.35)}
+.cta:active{transform:scale(.98)}
+.sec{padding:16px 18px;border-radius:16px;font-weight:650;background:var(--card);color:var(--text);border:1.5px solid var(--line)}
+.tools{display:flex;gap:8px;margin:16px 0 4px}
+.tools .sec{flex:1;padding:13px 10px;font-size:15px}
+
+.progress{margin:20px 0 6px;font-weight:650}
+.track{height:12px;border-radius:99px;background:var(--line);overflow:hidden}
+.fill{height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:99px;transition:width .3s}
+.buy{display:flex;align-items:center;gap:14px;width:100%;text-align:left;background:var(--card);border:2px solid var(--line);border-radius:18px;padding:16px;margin:0;box-shadow:var(--shadow);min-height:68px}
+.buy .box{width:30px;height:30px;border-radius:9px;border:2.5px solid var(--muted);display:grid;place-items:center;flex:none;color:transparent;font-weight:900}
+.buy .t{flex:1}
+.buy .t b{display:block;font-size:18px}
+.buy .t small{display:block;margin-top:2px;font-size:14px;color:var(--muted)}
+.buy.bought{background:var(--done-bg);border-color:var(--accent);color:var(--done-text)}
+.buy.bought .box{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.buy.bought .t b{text-decoration:line-through}
+.empty{text-align:center;color:var(--muted);padding:30px 0}
+.msg{min-height:22px;margin:8px 2px;color:var(--muted);font-size:14px;text-align:center}
+.celebrate{text-align:center;font-weight:700;color:var(--done-text);margin:14px 0}
+
+.shade{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:flex-end;justify-content:center;z-index:20}
+.sheet{width:100%;max-width:640px;background:var(--card);border-radius:24px 24px 0 0;padding:20px 18px calc(20px + env(safe-area-inset-bottom,0px))}
+.sheet h3{margin:0 0 6px}
+.sheet p{margin:0 0 12px;color:var(--muted);font-size:14px}
+.sheet textarea{width:100%;height:150px;border:1.5px solid var(--line);border-radius:12px;padding:12px;background:var(--bg);font:13px ui-monospace,Menlo,monospace;resize:none}
+.sheet .btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.sheet .btns button{flex:1;min-width:120px;padding:14px;border-radius:12px;font-weight:650}
+.p{background:var(--accent);color:var(--on-accent)}
+.s{background:var(--bg);border:1.5px solid var(--line)}
+
+@media print{
+  body{background:#fff;color:#000;padding:0}
+  .hero,.bar,.tools,.progress,.track,.msg,.shade,.screenOnly{display:none!important}
+  .hero{display:block!important}
+  main{max-width:none}
+  .buy{box-shadow:none;border:0;border-bottom:1px solid #bbb;border-radius:0;padding:8px 0;background:#fff!important;color:#000!important;min-height:0}
+  .buy .box{color:transparent!important;background:none!important;border:1.5px solid #000!important;width:18px;height:18px;border-radius:3px}
+  .buy.bought .box{color:#000!important}
+  .printTitle{display:block!important;font-size:20px;margin:0 0 10px}
+}
+.printTitle{display:none}
+</style>
+</head>
+<body>
+<main>
+  <header class="hero screenOnly">
+    <div class="top">
+      <div>
+        <h1>🛒 Mi compra</h1>
+        <p id="sub">Toca lo que necesitas</p>
+      </div>
+      <button class="theme" id="theme" aria-label="Cambiar tema">🌓</button>
+    </div>
+  </header>
+
+  <section id="selectView">
+    <div class="list" id="catalog"></div>
+    <div class="tools">
+      <button class="sec" id="import1">⬇️ Importar</button>
+      <button class="sec" id="export1">⬆️ Exportar</button>
+    </div>
+  </section>
+
+  <section id="shoppingView" class="hidden">
+    <h2 class="printTitle">Mi lista de la compra</h2>
+    <div class="progress" id="progress"></div>
+    <div class="track screenOnly" aria-hidden="true"><div class="fill" id="fill"></div></div>
+    <div class="list" id="chosen"></div>
+    <div class="celebrate hidden" id="done">🎉 ¡Compra completa!</div>
+    <div class="tools screenOnly">
+      <button class="sec" id="pdf">🖨️ PDF</button>
+      <button class="sec" id="export2">⬆️ Exportar</button>
+      <button class="sec" id="import2">⬇️ Importar</button>
+    </div>
+  </section>
+
+  <p class="msg" id="message" role="status"></p>
+</main>
+
+<div class="bar screenOnly">
+  <div class="inner">
+    <button class="sec hidden" id="back">✏️ Editar</button>
+    <button class="cta" id="finish">Ver mi compra</button>
+  </div>
+</div>
+
+<div class="shade hidden" id="shade">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+    <h3 id="sheetTitle"></h3>
+    <p id="sheetHelp"></p>
+    <textarea id="box" spellcheck="false" autocapitalize="off" autocorrect="off"></textarea>
+    <div class="btns">
+      <button class="p" id="sheetMain"></button>
+      <button class="s" id="sheetFile">📁 Elegir archivo .json</button>
+      <button class="s" id="sheetClose">Cerrar</button>
+    </div>
+  </div>
+</div>
+<input type="file" id="file" accept=".json,application/json,text/plain" class="hidden">
+
+<script>
+const names=['Fruta','Hamburguesas','Pechuga de pollo','Embutidos','Queso','Roti','Pastas hechas','Mac','Aceitunas','Bebidas','Huevos','Congelados','Atún','Pescado','Mayonesa','Chocolate','Postres','Helados','Vainas','Maíz','Tomate frito','Frutos secos','Yogures','Tortitas','Patatas fritas','Pan','Pan de hamburguesa','Palitos','Aceite','Leche','Arroces','Legumbres','Bollería','Barritas','Otros'];
+const emoji={'Fruta':'🍎','Hamburguesas':'🍔','Pechuga de pollo':'🍗','Embutidos':'🥓','Queso':'🧀','Roti':'🫓','Pastas hechas':'🍝','Mac':'🥘','Aceitunas':'🫒','Bebidas':'🥤','Huevos':'🥚','Congelados':'🧊','Atún':'🐟','Pescado':'🐠','Mayonesa':'🥫','Chocolate':'🍫','Postres':'🍮','Helados':'🍦','Vainas':'🫛','Maíz':'🌽','Tomate frito':'🍅','Frutos secos':'🥜','Yogures':'🍶','Tortitas':'🍘','Patatas fritas':'🍟','Pan':'🍞','Pan de hamburguesa':'🥯','Palitos':'🥖','Aceite':'🫗','Leche':'🥛','Arroces':'🍚','Legumbres':'🫘','Bollería':'🥐','Barritas':'🍬','Otros':'➕'};
+const KEY='listaCompraMovil_v1';
+const $=id=>document.getElementById(id);
+let data=names.map(name=>({name,selected:false,note:'',bought:false}));
+let mode='select',sheetMode='export';
+
+function normalize(list){
+  const byName=new Map((Array.isArray(list)?list:[]).filter(p=>p&&typeof p.name==='string').map(p=>[p.name,p]));
+  return names.map(name=>{const p=byName.get(name)||{};const sel=p.selected===true;
+    return{name,selected:sel,bought:sel&&p.bought===true,note:typeof p.note==='string'?p.note.slice(0,300):''}});
+}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(data))}catch(e){}}
+function load(){try{const raw=localStorage.getItem(KEY);if(raw)data=normalize(JSON.parse(raw))}catch(e){}}
+function theme(){
+  let t=null;try{t=localStorage.getItem('listaCompraTema')}catch(e){}
+  if(t)document.documentElement.setAttribute('data-theme',t);
+}
+function say(t){$('message').textContent=t;if(t)setTimeout(()=>{if($('message').textContent===t)$('message').textContent=''},3500)}
+function count(){return data.filter(p=>p.selected).length}
+
+function updateBar(){
+  const n=count();
+  if(mode==='select'){
+    $('finish').textContent=n?'Ver mi compra ('+n+')':'Ver mi compra';
+    $('sub').textContent=n?n+(n===1?' producto elegido':' productos elegidos'):'Toca lo que necesitas';
+  }
+}
+
+function catalog(){
+  const root=$('catalog');root.replaceChildren();
+  data.forEach(p=>{
+    const row=document.createElement('div');row.className='row'+(p.selected?' on':'');
+    const btn=document.createElement('button');btn.type='button';btn.className='pick';btn.setAttribute('aria-pressed',String(p.selected));
+    const e=document.createElement('span');e.className='emo';e.textContent=emoji[p.name]||'🛍️';
+    const n=document.createElement('span');n.className='pname';n.textContent=p.name;
+    const t=document.createElement('span');t.className='tick';t.textContent='✓';
+    btn.append(e,n,t);
+    const note=document.createElement('input');
+    note.className='note'+(p.selected?'':' hidden');
+    note.placeholder=p.name==='Otros'?'¿Qué necesitas? (ej. pilas, detergente)':'Nota o cantidad (opcional)';
+    note.value=p.note;
+    note.setAttribute('aria-label',p.name==='Otros'?'Qué necesitas':'Nota para '+p.name);
+    note.enterKeyHint='done';
+    note.addEventListener('input',()=>{p.note=note.value;save()});
+    note.addEventListener('keydown',ev=>{if(ev.key==='Enter')note.blur()});
+    btn.addEventListener('click',()=>{
+      p.selected=!p.selected;if(!p.selected)p.bought=false;
+      row.classList.toggle('on',p.selected);btn.setAttribute('aria-pressed',String(p.selected));
+      note.classList.toggle('hidden',!p.selected);
+      if(p.selected&&p.name==='Otros')note.focus();
+      save();updateBar();
+    });
+    row.append(btn,note);root.append(row);
+  });
+}
+
+function shopping(){
+  const root=$('chosen');root.replaceChildren();
+  const chosen=data.filter(p=>p.selected);
+  const done=chosen.filter(p=>p.bought).length;
+  $('progress').textContent=done+' de '+chosen.length+' productos comprados';
+  $('fill').style.width=(chosen.length?done/chosen.length*100:0)+'%';
+  $('done').classList.toggle('hidden',!(chosen.length&&done===chosen.length));
+  chosen.forEach(p=>{
+    const b=document.createElement('button');b.type='button';b.className='buy'+(p.bought?' bought':'');
+    b.setAttribute('aria-pressed',String(p.bought));
+    const box=document.createElement('span');box.className='box';box.textContent='✓';
+    const t=document.createElement('span');t.className='t';
+    const strong=document.createElement('b');
+    const note=p.note.trim();
+    if(p.name==='Otros'&&note){strong.textContent=(emoji[p.name])+' '+note}
+    else{strong.textContent=(emoji[p.name]||'🛍️')+' '+p.name}
+    t.append(strong);
+    if(note&&p.name!=='Otros'){const s=document.createElement('small');s.textContent=note;t.append(s)}
+    b.append(box,t);
+    b.addEventListener('click',()=>{p.bought=!p.bought;save();shopping()});
+    root.append(b);
+  });
+  if(!chosen.length){const p=document.createElement('p');p.className='empty';p.textContent='No has seleccionado ningún producto.';root.append(p)}
+}
+
+function show(next){
+  mode=next;
+  $('selectView').classList.toggle('hidden',next!=='select');
+  $('shoppingView').classList.toggle('hidden',next!=='shopping');
+  $('back').classList.toggle('hidden',next!=='shopping');
+  $('finish').classList.toggle('hidden',next!=='select');
+  if(next==='select'){catalog();updateBar()}
+  else{shopping();$('sub').textContent='Marca lo que vas metiendo al carro'}
+  window.scrollTo(0,0);
+}
+
+/* Exportar / importar */
+function openSheet(m){
+  sheetMode=m;$('shade').classList.remove('hidden');
+  if(m==='export'){
+    $('sheetTitle').textContent='Exportar lista';
+    $('sheetHelp').textContent='Copia este texto y guárdalo (por ejemplo en Notas). Para recuperarlo, pégalo en Importar.';
+    $('box').value=JSON.stringify({version:1,products:data});$('box').readOnly=true;
+    $('sheetMain').textContent='Copiar';$('sheetFile').classList.add('hidden');
+    $('box').focus();$('box').select();
+  }else{
+    $('sheetTitle').textContent='Importar lista';
+    $('sheetHelp').textContent='Elige tu archivo mi_lista_compra.json (el que exportaste) o pega su contenido aquí.';
+    $('box').value='';$('box').readOnly=false;
+    $('sheetMain').textContent='Importar';$('sheetFile').classList.remove('hidden');
+  }
+}
+function closeSheet(){$('shade').classList.add('hidden')}
+async function copyText(){
+  const box=$('box');box.select();box.setSelectionRange(0,box.value.length);
+  try{await navigator.clipboard.writeText(box.value);say('Copiado al portapapeles.')}
+  catch(e){try{document.execCommand('copy');say('Copiado al portapapeles.')}catch(e2){say('Selecciona el texto y cópialo manualmente.')}}
+}
+function importText(text){
+  try{
+    if(text.length>100000)throw Error('grande');
+    const parsed=JSON.parse(text);
+    if(!parsed||!Array.isArray(parsed.products))throw Error('formato');
+    data=normalize(parsed.products);save();closeSheet();show(mode);say('Lista importada correctamente.');
+  }catch(err){say('No se ha podido importar. Comprueba que es una lista exportada por esta app.')}
+}
+$('sheetMain').addEventListener('click',()=>{sheetMode==='export'?copyText():importText($('box').value.trim())});
+$('sheetClose').addEventListener('click',closeSheet);
+$('shade').addEventListener('click',e=>{if(e.target===$('shade'))closeSheet()});
+$('sheetFile').addEventListener('click',()=>$('file').click());
+$('file').addEventListener('change',e=>{
+  const f=e.target.files[0];if(!f)return;
+  if(f.size>100000){say('Archivo demasiado grande.');$('file').value='';return}
+  const r=new FileReader();r.onload=()=>{importText(String(r.result));$('file').value=''};r.readAsText(f);
+});
+async function exportFile(){
+  const json=JSON.stringify({version:1,products:data},null,2);
+  let dl=null;
+  try{dl=window.claude&&await window.claude.use('downloads')}catch(e){}
+  if(!dl){openSheet('export');return}
+  try{
+    await dl.save({filename:'mi_lista_compra.json',data:json});
+    say('Archivo mi_lista_compra.json guardado.');
+  }catch(err){
+    if(err&&err.code==='declined')return;
+    openSheet('export');
+  }
+}
+for(const id of ['export1','export2'])$(id).addEventListener('click',exportFile);
+for(const id of ['import1','import2'])$(id).addEventListener('click',()=>openSheet('import'));
+
+$('finish').addEventListener('click',()=>{
+  if(!count()){say('Selecciona al menos un producto.');return}
+  say('');show('shopping');
+});
+$('back').addEventListener('click',()=>show('select'));
+$('pdf').addEventListener('click',()=>window.print());
+$('theme').addEventListener('click',()=>{
+  const cur=document.documentElement.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');
+  const next=cur==='dark'?'light':'dark';
+  document.documentElement.setAttribute('data-theme',next);
+  try{localStorage.setItem('listaCompraTema',next)}catch(e){}
+});
+
+theme();load();catalog();updateBar();
+</script>
+</body>
+</html>
