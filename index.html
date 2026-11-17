@@ -100,6 +100,17 @@ main{max-width:640px;margin:0 auto;padding:0 14px}
   .printTitle{display:block!important;font-size:20px;margin:0 0 10px}
 }
 .printTitle{display:none}
+
+.account{margin:18px 0;padding:18px;border-radius:18px;background:var(--card);box-shadow:var(--shadow)}
+.account h2{margin:0 0 10px;font-size:20px}
+.account label{display:block;margin:10px 0}
+.account input{display:block;width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--bg)}
+.account .cta{width:100%;margin-top:8px}
+.session{display:flex;align-items:center;justify-content:space-between;gap:8px;overflow-wrap:anywhere}
+.session small{min-width:0}.session button{padding:10px}
+#syncState{font-size:14px;color:var(--muted);margin:8px 0}
+button:disabled{opacity:.55;cursor:wait}
+@media print{.account,#syncState{display:none!important}}
 </style>
 </head>
 <body>
@@ -114,6 +125,22 @@ main{max-width:640px;margin:0 auto;padding:0 14px}
     </div>
   </header>
 
+  
+  <section class="account screenOnly" id="loginPanel">
+    <h2>Tu lista compartida</h2>
+    <p>Entra con tu correo y contraseña para compartir la compra.</p>
+    <form id="loginForm">
+      <label>Correo electrónico<input id="email" type="email" autocomplete="username" required maxlength="254"></label>
+      <label>Contraseña<input id="password" type="password" autocomplete="current-password" required></label>
+      <button class="cta" id="loginButton" type="submit">Entrar</button>
+    </form>
+    <p id="authMessage" role="status" aria-live="polite">Conectando…</p>
+  </section>
+  <div class="account session screenOnly hidden" id="sessionPanel">
+    <small id="currentUser"></small><button class="sec" id="logout" type="button">Salir</button>
+  </div>
+  <p class="screenOnly" id="syncState" role="status" aria-live="polite"></p>
+  <div id="appContent" class="hidden">
   <section id="selectView">
     <div class="list" id="catalog"></div>
     <div class="tools">
@@ -135,10 +162,11 @@ main{max-width:640px;margin:0 auto;padding:0 14px}
     </div>
   </section>
 
+  </div>
   <p class="msg" id="message" role="status"></p>
 </main>
 
-<div class="bar screenOnly">
+<div class="bar screenOnly hidden" id="appBar">
   <div class="inner">
     <button class="sec hidden" id="back">✏️ Editar</button>
     <button class="cta" id="finish">Ver mi compra</button>
@@ -159,6 +187,7 @@ main{max-width:640px;margin:0 auto;padding:0 14px}
 </div>
 <input type="file" id="file" accept=".json,application/json,text/plain" class="hidden">
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.8/dist/umd/supabase.js"></script>
 <script>
 const names=['Fruta','Hamburguesas','Pechuga de pollo','Embutidos','Queso','Roti','Pastas hechas','Mac','Aceitunas','Bebidas','Huevos','Congelados','Atún','Pescado','Mayonesa','Chocolate','Postres','Helados','Vainas','Maíz','Tomate frito','Frutos secos','Yogures','Tortitas','Patatas fritas','Pan','Pan de hamburguesa','Palitos','Aceite','Leche','Arroces','Legumbres','Bollería','Barritas','Otros'];
 const emoji={'Fruta':'🍎','Hamburguesas':'🍔','Pechuga de pollo':'🍗','Embutidos':'🥓','Queso':'🧀','Roti':'🫓','Pastas hechas':'🍝','Mac':'🥘','Aceitunas':'🫒','Bebidas':'🥤','Huevos':'🥚','Congelados':'🧊','Atún':'🐟','Pescado':'🐠','Mayonesa':'🥫','Chocolate':'🍫','Postres':'🍮','Helados':'🍦','Vainas':'🫛','Maíz':'🌽','Tomate frito':'🍅','Frutos secos':'🥜','Yogures':'🍶','Tortitas':'🍘','Patatas fritas':'🍟','Pan':'🍞','Pan de hamburguesa':'🥯','Palitos':'🥖','Aceite':'🫗','Leche':'🥛','Arroces':'🍚','Legumbres':'🫘','Bollería':'🥐','Barritas':'🍬','Otros':'➕'};
@@ -172,7 +201,12 @@ function normalize(list){
   return names.map(name=>{const p=byName.get(name)||{};const sel=p.selected===true;
     return{name,selected:sel,bought:sel&&p.bought===true,note:typeof p.note==='string'?p.note.slice(0,300):''}});
 }
-function save(){try{localStorage.setItem(KEY,JSON.stringify(data))}catch(e){}}
+function save(product,patch){
+  if(!ready)return;
+  if(product)enqueue(product.name,patch);
+  else data.forEach(p=>enqueue(p.name,{seleccionado:p.selected,nota:p.note,comprado:p.bought},false));
+  persist();scheduleFlush();
+}
 function load(){try{const raw=localStorage.getItem(KEY);if(raw)data=normalize(JSON.parse(raw))}catch(e){}}
 function theme(){
   let t=null;try{t=localStorage.getItem('listaCompraTema')}catch(e){}
@@ -203,15 +237,15 @@ function catalog(){
     note.placeholder=p.name==='Otros'?'¿Qué necesitas? (ej. pilas, detergente)':'Nota o cantidad (opcional)';
     note.value=p.note;
     note.setAttribute('aria-label',p.name==='Otros'?'Qué necesitas':'Nota para '+p.name);
-    note.enterKeyHint='done';
-    note.addEventListener('input',()=>{p.note=note.value;save()});
+    note.enterKeyHint='done';note.maxLength=300;note.dataset.product=p.name;
+    note.addEventListener('input',()=>{p.note=note.value.slice(0,300);save(p,{nota:p.note})});
     note.addEventListener('keydown',ev=>{if(ev.key==='Enter')note.blur()});
     btn.addEventListener('click',()=>{
       p.selected=!p.selected;if(!p.selected)p.bought=false;
       row.classList.toggle('on',p.selected);btn.setAttribute('aria-pressed',String(p.selected));
       note.classList.toggle('hidden',!p.selected);
       if(p.selected&&p.name==='Otros')note.focus();
-      save();updateBar();
+      save(p,{seleccionado:p.selected,comprado:p.bought});updateBar();
     });
     row.append(btn,note);root.append(row);
   });
@@ -236,7 +270,7 @@ function shopping(){
     t.append(strong);
     if(note&&p.name!=='Otros'){const s=document.createElement('small');s.textContent=note;t.append(s)}
     b.append(box,t);
-    b.addEventListener('click',()=>{p.bought=!p.bought;save();shopping()});
+    b.addEventListener('click',()=>{p.bought=!p.bought;save(p,{comprado:p.bought});shopping()});
     root.append(b);
   });
   if(!chosen.length){const p=document.createElement('p');p.className='empty';p.textContent='No has seleccionado ningún producto.';root.append(p)}
@@ -292,7 +326,7 @@ $('file').addEventListener('change',e=>{
   if(f.size>100000){say('Archivo demasiado grande.');$('file').value='';return}
   const r=new FileReader();r.onload=()=>{importText(String(r.result));$('file').value=''};r.readAsText(f);
 });
-async function exportFile(){
+async function oldExportFile(){
   const json=JSON.stringify({version:1,products:data},null,2);
   let dl=null;
   try{dl=window.claude&&await window.claude.use('downloads')}catch(e){}
@@ -321,7 +355,213 @@ $('theme').addEventListener('click',()=>{
   try{localStorage.setItem('listaCompraTema',next)}catch(e){}
 });
 
-theme();load();catalog();updateBar();
+/* Proyecto compartido. Solo clave pública; la autorización se aplica mediante RLS. */
+const SUPABASE_URL='https://kyrhqkvjcswimyejruyz.supabase.co';
+const SUPABASE_KEY='sb_publishable_a8vqFoOv4Zsl7GDgowZl0Q_rHdTas4d';
+let client=null,userId=null,ready=false,channel=null,epoch=0;
+let pending={},ids=new Map(),timer=null,poll=null,flushing=false,refreshing=false;
+let refreshAgain=false,realtime=false;
+const status=t=>{$('syncState').textContent=t};
+const cacheKey=()=> 'compraCompartida_v2_'+userId;
+function persist(){
+  if(!userId)return;
+  try{localStorage.setItem(cacheKey(),JSON.stringify({products:data,pending}))}
+  catch(e){status('No se puede guardar la copia local. Mantén esta página abierta hasta sincronizar.')}
+}
+function restore(){
+  pending={};
+  try{
+    const cached=JSON.parse(localStorage.getItem(cacheKey())||'null');
+    if(cached){
+      data=normalize(cached.products);
+      for(const name of names){
+        const p=cached.pending&&cached.pending[name];if(!p||typeof p!=='object')continue;
+        const patch={};
+        if(typeof p.seleccionado==='boolean')patch.seleccionado=p.seleccionado;
+        if(typeof p.comprado==='boolean')patch.comprado=p.comprado;
+        if(typeof p.nota==='string')patch.nota=p.nota.slice(0,300);
+        if(Object.keys(patch).length)pending[name]=patch;
+      }
+    }
+  }catch(e){}
+}
+function enqueue(name,patch,saveNow=true){
+  pending[name]={...pending[name],...patch};
+  if(saveNow)persist();
+  status(navigator.onLine?'Cambios pendientes de guardar…':'Sin conexión. Los cambios quedan pendientes en este dispositivo.');
+}
+function scheduleFlush(){clearTimeout(timer);timer=setTimeout(()=>flush(),400)}
+function repaint(){
+  // Mantener el foco y los objetos que utilizan los manejadores de cada producto.
+  if(mode==='shopping')shopping();
+  else{
+    const rows=$('catalog').children;
+    data.forEach((p,i)=>{
+      const row=rows[i];if(!row)return;
+      const btn=row.querySelector('button'),note=row.querySelector('input');
+      row.classList.toggle('on',p.selected);btn.setAttribute('aria-pressed',String(p.selected));
+      note.classList.toggle('hidden',!p.selected);
+      if(document.activeElement!==note)note.value=p.note;
+    });
+    updateBar();
+  }
+}
+function applyRows(rows){
+  const map=new Map();
+  for(const row of rows){
+    if(map.has(row.nombre))throw Error('Hay productos duplicados. Revisa preparar_supabase.sql.');
+    map.set(row.nombre,row);
+  }
+  if(names.some(n=>!map.has(n)))throw Error('Falta completar el catálogo: ejecuta preparar_supabase.sql en Supabase.');
+  ids=new Map(names.map(n=>[n,map.get(n).id]));
+  data.forEach(p=>{
+    const row={...map.get(p.name),...(pending[p.name]||{})};
+    p.selected=row.seleccionado===true;p.bought=p.selected&&row.comprado===true;
+    p.note=typeof row.nota==='string'?row.nota.slice(0,300):'';
+  });
+  persist();repaint();
+}
+async function readRows(){
+  const result=await client.from('productos_compra').select('id,nombre,seleccionado,nota,comprado,actualizado_en').limit(1000);
+  if(result.error)throw result.error;
+  return result.data;
+}
+async function refresh(){
+  if(!ready)return;
+  if(refreshing){refreshAgain=true;return}
+  refreshing=true;const token=epoch;
+  try{
+    const rows=await readRows();if(token!==epoch)return;
+    applyRows(rows);
+    if(!Object.keys(pending).length)status(realtime?'Lista sincronizada en tiempo real.':'Lista actualizada. Comprobando cambios cada 15 segundos.');
+  }catch(e){if(token===epoch)status('No se ha podido actualizar la lista. '+friendly(e))}
+  finally{refreshing=false;if(refreshAgain){refreshAgain=false;refresh()}}
+}
+async function flush(){
+  if(!ready||flushing||!navigator.onLine)return;
+  flushing=true;const token=epoch;
+  try{
+    for(const name of Object.keys(pending)){
+      if(token!==epoch)return;
+      const patch={...pending[name]};
+      let query=client.from('productos_compra').update({...patch,actualizado_en:new Date().toISOString()}).eq('id',ids.get(name));
+      // Un marcado antiguo no puede volver a comprar un producto que otro haya quitado.
+      if(patch.comprado===true&&patch.seleccionado!==true)query=query.eq('seleccionado',true);
+      const result=await query.select('id');
+      if(token!==epoch)return;
+      if(result.error)throw result.error;
+      if(!result.data||result.data.length!==1){
+        const check=await client.from('productos_compra').select('seleccionado').eq('id',ids.get(name)).maybeSingle();
+        if(token!==epoch)return;
+        if(!check.error&&check.data&&check.data.seleccionado===false&&patch.comprado===true&&patch.seleccionado!==true){
+          if(pending[name]&&pending[name].comprado===true)delete pending[name].comprado;
+          if(pending[name]&&!Object.keys(pending[name]).length)delete pending[name];
+          persist();say('Otro usuario ha quitado ese producto de la lista.');continue;
+        }
+        throw Error('El producto cambió o tu cuenta no tiene permiso para guardarlo. Revisa la lista y vuelve a intentarlo.');
+      }
+      for(const key of Object.keys(patch)){
+        if(pending[name]&&pending[name][key]===patch[key])delete pending[name][key];
+      }
+      if(pending[name]&&!Object.keys(pending[name]).length)delete pending[name];
+      persist();
+    }
+    if(token===epoch)await refresh();
+  }catch(e){if(token===epoch)status('Hay cambios sin guardar. '+friendly(e))}
+  finally{
+    flushing=false;
+    // No reenviar en bucle una escritura rechazada. Los eventos de red y el sondeo reintentan.
+  }
+}
+function friendly(e){
+  const m=String(e&&e.message||e||'Error de conexión');
+  if(/invalid login credentials/i.test(m))return 'Correo o contraseña incorrectos.';
+  if(/email not confirmed/i.test(m))return 'Confirma primero tu correo electrónico.';
+  if(/fetch|network|load failed/i.test(m))return 'Comprueba tu conexión a Internet.';
+  if(/row.level|permission|42501/i.test(m))return 'Esta cuenta no está autorizada para la lista.';
+  return m;
+}
+function lock(){
+  ready=false;epoch++;clearTimeout(timer);clearInterval(poll);poll=null;
+  if(channel&&client)client.removeChannel(channel);channel=null;realtime=false;
+  $('appContent').classList.add('hidden');$('appBar').classList.add('hidden');
+  $('sessionPanel').classList.add('hidden');$('loginPanel').classList.remove('hidden');
+  closeSheet();$('box').value='';$('file').value='';
+  userId=null;pending={};ids=new Map();data=normalize([]);catalog();shopping();
+}
+async function activate(session){
+  if(session&&session.user.id===userId)return;
+  lock();if(!session){status('');$('authMessage').textContent='';return}
+  const token=epoch;userId=session.user.id;
+  $('currentUser').textContent=session.user.email||'Sesión iniciada';
+  $('sessionPanel').classList.remove('hidden');
+  $('authMessage').textContent='Comprobando el acceso…';
+  try{
+    const access=await client.from('usuarios_compra').select('usuario_id').eq('usuario_id',userId).maybeSingle();
+    if(token!==epoch)return;if(access.error)throw access.error;
+    if(!access.data)throw Error('Tu cuenta no está autorizada para esta lista.');
+    restore();catalog();const rows=await readRows();if(token!==epoch)return;
+    applyRows(rows);ready=true;
+    $('loginPanel').classList.add('hidden');$('appContent').classList.remove('hidden');$('appBar').classList.remove('hidden');
+    show('select');$('authMessage').textContent='';
+    channel=client.channel('compra-'+userId)
+      .on('postgres_changes',{event:'*',schema:'public',table:'productos_compra'},()=>refresh())
+      .subscribe(state=>{
+        if(token!==epoch)return;realtime=state==='SUBSCRIBED';
+        if(realtime)refresh();
+        else status('Conectando actualizaciones. La lista se comprobará cada 15 segundos.');
+      });
+    poll=setInterval(()=>{if(navigator.onLine){flush();refresh()}},15000);
+    if(Object.keys(pending).length)flush();else status('Lista cargada. Conectando actualizaciones…');
+  }catch(e){
+    if(token!==epoch)return;
+    ready=false;userId=null;$('authMessage').textContent=friendly(e);status('No se ha abierto la lista compartida.');
+  }
+}
+async function boot(){
+  if(!window.supabase){$('authMessage').textContent='No se ha podido cargar la conexión. Comprueba Internet y recarga la página.';return}
+  try{
+    client=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+    client.auth.onAuthStateChange((event,session)=>{
+      // El trabajo de red queda fuera del bloqueo interno de Auth.
+      if(event==='SIGNED_OUT')lock();
+      setTimeout(()=>activate(session),0);
+    });
+    const result=await client.auth.getSession();if(result.error)throw result.error;
+    if(!userId)await activate(result.data.session);
+  }catch(e){$('authMessage').textContent=friendly(e)}
+}
+$('loginForm').addEventListener('submit',async event=>{
+  event.preventDefault();if(!client)return;
+  $('loginButton').disabled=true;$('authMessage').textContent='Entrando…';
+  try{
+    const result=await client.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});
+    if(result.error)throw result.error;$('password').value='';await activate(result.data.session);
+  }catch(e){$('authMessage').textContent=friendly(e)}
+  finally{$('loginButton').disabled=false}
+});
+$('logout').addEventListener('click',async()=>{
+  if(Object.keys(pending).length){
+    await flush();
+    if(Object.keys(pending).length){say('Quedan cambios pendientes. Recupera la conexión antes de salir.');return}
+  }
+  try{const result=await client.auth.signOut({scope:'local'});if(result.error)throw result.error;lock();status('Sesión cerrada.')}
+  catch(e){say(friendly(e))}
+});
+window.addEventListener('online',()=>{flush();refresh()});
+window.addEventListener('offline',()=>status('Sin conexión. Los cambios quedan pendientes en este dispositivo.'));
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){flush();refresh()}});
+window.addEventListener('beforeunload',event=>{
+  if(Object.keys(pending).length){persist();event.preventDefault();event.returnValue=''}
+});
+async function exportFile(){
+  const blob=new Blob([JSON.stringify({version:1,products:data},null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob),link=document.createElement('a');
+  link.href=url;link.download='mi_lista_compra.json';document.body.append(link);link.click();link.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);openSheet('export');
+}
+
+theme();catalog();updateBar();boot();
 </script>
 </body>
 </html>
